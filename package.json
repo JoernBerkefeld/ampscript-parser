@@ -1,0 +1,33 @@
+{
+    "name": "ampscript-parser",
+    "version": "0.1.0",
+    "description": "AMPscript lexer and parser producing an AST for SFMC tooling",
+    "type": "module",
+    "main": "src/index.js",
+    "exports": {
+        ".": "./src/index.js"
+    },
+    "files": ["src"],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/JoernBerkefeld/ampscript-parser.git"
+    },
+    "bugs": {
+        "url": "https://github.com/JoernBerkefeld/ampscript-parser/issues"
+    },
+    "homepage": "https://github.com/JoernBerkefeld/ampscript-parser#readme",
+    "author": "Joern Berkefeld",
+    "keywords": [
+        "ampscript",
+        "sfmc",
+        "salesforce",
+        "marketing-cloud",
+        "parser",
+        "ast",
+        "lexer"
+    ],
+    "license": "MIT",
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}
