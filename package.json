@@ -30,9 +30,23 @@
     ],
     "license": "MIT",
     "scripts": {
-        "test": "echo No tests defined"
+        "test": "echo No tests defined",
+        "lint": "eslint ./src/**/*.js",
+        "lint:fix": "eslint --fix ./src/**/*.js",
+        "format": "prettier --write ./src/**/*.js",
+        "format:check": "prettier --check ./src/**/*.js"
     },
     "engines": {
         "node": ">=18.0.0"
+    },
+    "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "eslint": "^10.1.0",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-jsdoc": "^62.0.0",
+        "eslint-plugin-prettier": "^5.5.0",
+        "eslint-plugin-unicorn": "^64.0.0",
+        "globals": "^17.4.0",
+        "prettier": "^3.8.1"
     }
 }

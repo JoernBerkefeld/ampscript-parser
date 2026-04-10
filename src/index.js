@@ -16,9 +16,13 @@
 /**
  * Walks an array of statement nodes and marks nodes to be ignored based on
  * prettier-ignore and prettier-ignore-start / prettier-ignore-end comments.
+ *
+ * @param nodes
  */
 function markPrettierIgnore(nodes) {
-    if (!Array.isArray(nodes)) return;
+    if (!Array.isArray(nodes)) {
+        return;
+    }
     let index = 0;
     while (index < nodes.length) {
         const node = nodes[index];
@@ -28,8 +32,12 @@ function markPrettierIgnore(nodes) {
             /^\s*\/\*\s*prettier-ignore\s*\*\/\s*$/i.test(node.value)
         ) {
             let index_ = index + 1;
-            while (index_ < nodes.length && nodes[index_].type === 'Comment') index_++;
-            if (index_ < nodes.length) nodes[index_].prettierIgnore = true;
+            while (index_ < nodes.length && nodes[index_].type === 'Comment') {
+                index_++;
+            }
+            if (index_ < nodes.length) {
+                nodes[index_].prettierIgnore = true;
+            }
             index = index_;
             continue;
         }
@@ -42,21 +50,31 @@ function markPrettierIgnore(nodes) {
                     /prettier-ignore-end/i.test(nodes[index_].value)
                 )
             ) {
-                if (nodes[index_].type !== 'Comment') nodes[index_].prettierIgnore = true;
+                if (nodes[index_].type !== 'Comment') {
+                    nodes[index_].prettierIgnore = true;
+                }
                 index_++;
             }
             index = index_ + 1;
             continue;
         }
         if (node && typeof node === 'object') {
-            if (Array.isArray(node.statements)) markPrettierIgnore(node.statements);
-            if (Array.isArray(node.consequent)) markPrettierIgnore(node.consequent);
+            if (Array.isArray(node.statements)) {
+                markPrettierIgnore(node.statements);
+            }
+            if (Array.isArray(node.consequent)) {
+                markPrettierIgnore(node.consequent);
+            }
             if (Array.isArray(node.alternates)) {
                 for (const alt of node.alternates) {
-                    if (Array.isArray(alt.body)) markPrettierIgnore(alt.body);
+                    if (Array.isArray(alt.body)) {
+                        markPrettierIgnore(alt.body);
+                    }
                 }
             }
-            if (Array.isArray(node.body)) markPrettierIgnore(node.body);
+            if (Array.isArray(node.body)) {
+                markPrettierIgnore(node.body);
+            }
         }
         index++;
     }
@@ -133,7 +151,9 @@ function tokenizeBlock(code, offset = 0) {
     while (index < code.length) {
         if (code[index] === ' ' || code[index] === '\t') {
             const start = index;
-            while (index < code.length && (code[index] === ' ' || code[index] === '\t')) index++;
+            while (index < code.length && (code[index] === ' ' || code[index] === '\t')) {
+                index++;
+            }
             tokens.push({
                 type: TokenType.WHITESPACE,
                 value: code.slice(start, index),
@@ -145,7 +165,9 @@ function tokenizeBlock(code, offset = 0) {
 
         if (code[index] === '\n' || code[index] === '\r') {
             const start = index;
-            if (code[index] === '\r' && code[index + 1] === '\n') index++;
+            if (code[index] === '\r' && code[index + 1] === '\n') {
+                index++;
+            }
             index++;
             tokens.push({
                 type: TokenType.NEWLINE,
@@ -159,9 +181,12 @@ function tokenizeBlock(code, offset = 0) {
         if (code[index] === '/' && code[index + 1] === '*') {
             const start = index;
             index += 2;
-            while (index < code.length && !(code[index] === '*' && code[index + 1] === '/'))
+            while (index < code.length && !(code[index] === '*' && code[index + 1] === '/')) {
                 index++;
-            if (index < code.length) index += 2;
+            }
+            if (index < code.length) {
+                index += 2;
+            }
             tokens.push({
                 type: TokenType.COMMENT,
                 value: code.slice(start, index),
@@ -178,7 +203,9 @@ function tokenizeBlock(code, offset = 0) {
             while (index < code.length && code[index] !== quote) {
                 index++;
             }
-            if (index < code.length) index++;
+            if (index < code.length) {
+                index++;
+            }
             tokens.push({
                 type: TokenType.STRING,
                 value: code.slice(start, index),
@@ -293,8 +320,12 @@ function tokenizeBlock(code, offset = 0) {
         if (code[index] === '@') {
             const start = index;
             index++;
-            if (index < code.length && code[index] === '@') index++;
-            while (index < code.length && /[a-zA-Z0-9_]/.test(code[index])) index++;
+            if (index < code.length && code[index] === '@') {
+                index++;
+            }
+            while (index < code.length && /[a-zA-Z0-9_]/.test(code[index])) {
+                index++;
+            }
             tokens.push({
                 type: TokenType.VARIABLE,
                 value: code.slice(start, index),
@@ -309,11 +340,17 @@ function tokenizeBlock(code, offset = 0) {
             (code[index] === '-' && index + 1 < code.length && /[0-9]/.test(code[index + 1]))
         ) {
             const start = index;
-            if (code[index] === '-') index++;
-            while (index < code.length && /[0-9]/.test(code[index])) index++;
+            if (code[index] === '-') {
+                index++;
+            }
+            while (index < code.length && /[0-9]/.test(code[index])) {
+                index++;
+            }
             if (index < code.length && code[index] === '.') {
                 index++;
-                while (index < code.length && /[0-9]/.test(code[index])) index++;
+                while (index < code.length && /[0-9]/.test(code[index])) {
+                    index++;
+                }
             }
             tokens.push({
                 type: TokenType.NUMBER,
@@ -326,7 +363,9 @@ function tokenizeBlock(code, offset = 0) {
 
         if (/[a-zA-Z_]/.test(code[index])) {
             const start = index;
-            while (index < code.length && /[a-zA-Z0-9_]/.test(code[index])) index++;
+            while (index < code.length && /[a-zA-Z0-9_]/.test(code[index])) {
+                index++;
+            }
             const word = code.slice(start, index);
             const lower = word.toLowerCase();
             const kwType = KEYWORDS[lower];
@@ -391,7 +430,9 @@ function parseStatements(tokens) {
             pos < tokens.length &&
             (tokens[pos].type === TokenType.WHITESPACE || tokens[pos].type === TokenType.NEWLINE)
         ) {
-            if (tokens[pos].type === TokenType.NEWLINE) newlineCount++;
+            if (tokens[pos].type === TokenType.NEWLINE) {
+                newlineCount++;
+            }
             pos++;
         }
         return newlineCount;
@@ -472,7 +513,7 @@ function parseStatements(tokens) {
     }
 
     function parseComparison() {
-        let left = parsePrimary();
+        const left = parsePrimary();
         skipTrivia();
         const t = current();
         if (
@@ -592,13 +633,17 @@ function parseStatements(tokens) {
     // ── Main statement parsing loop ──
 
     function pushStmt(stmt, blankLine) {
-        if (blankLine) stmt.blankLineBefore = true;
+        if (blankLine) {
+            stmt.blankLineBefore = true;
+        }
         statements.push(stmt);
     }
 
     while (pos < tokens.length) {
         const newlines = skipTrivia();
-        if (pos >= tokens.length) break;
+        if (pos >= tokens.length) {
+            break;
+        }
         const hasBlankLine = newlines >= 2 && statements.length > 0;
 
         const t = current();
@@ -712,12 +757,16 @@ function parseStatements(tokens) {
                 if (current() && current().type !== TokenType.BLOCK_CLOSE) {
                     parseExpression();
                     skipTrivia();
-                    if (current() && current().type === TokenType.THEN) advance();
+                    if (current() && current().type === TokenType.THEN) {
+                        advance();
+                    }
                 }
             }
             if (t.type === TokenType.NEXT) {
                 skipTrivia();
-                if (current() && current().type === TokenType.VARIABLE) advance();
+                if (current() && current().type === TokenType.VARIABLE) {
+                    advance();
+                }
             }
             pushStmt(
                 {
@@ -755,7 +804,9 @@ function parseStatements(tokens) {
 
         while (pos < tokens.length) {
             skipTrivia();
-            if (pos >= tokens.length) break;
+            if (pos >= tokens.length) {
+                break;
+            }
 
             const t = current();
 
@@ -874,7 +925,9 @@ function parseStatements(tokens) {
         const body = [];
         while (pos < tokens.length) {
             skipTrivia();
-            if (pos >= tokens.length) break;
+            if (pos >= tokens.length) {
+                break;
+            }
 
             const t = current();
             if (t.type === TokenType.NEXT) {
@@ -898,7 +951,9 @@ function parseStatements(tokens) {
             }
 
             const stmt = parseInnerStatement();
-            if (stmt) body.push(stmt);
+            if (stmt) {
+                body.push(stmt);
+            }
         }
 
         return {
@@ -916,7 +971,9 @@ function parseStatements(tokens) {
 
     function parseInnerStatement() {
         skipTrivia();
-        if (pos >= tokens.length) return null;
+        if (pos >= tokens.length) {
+            return null;
+        }
 
         const t = current();
 
@@ -1050,7 +1107,9 @@ function parse(text) {
                 while (index < text.length) {
                     if (text[index] === '<') {
                         const closeMatch = scriptCloseRe.exec(text.slice(index));
-                        if (closeMatch) break;
+                        if (closeMatch) {
+                            break;
+                        }
                     }
                     index++;
                 }
@@ -1095,7 +1154,9 @@ function parse(text) {
                     text[index + 2] === '%'
                 ) {
                     depth--;
-                    if (depth === 0) break;
+                    if (depth === 0) {
+                        break;
+                    }
                     index += 3;
                 } else {
                     index++;
