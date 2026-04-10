@@ -31,10 +31,10 @@
     "license": "MIT",
     "scripts": {
         "test": "echo No tests defined",
-        "lint": "eslint ./src/**/*.js",
-        "lint:fix": "eslint --fix ./src/**/*.js",
-        "format": "prettier --write ./src/**/*.js",
-        "format:check": "prettier --check ./src/**/*.js"
+        "lint": "eslint .",
+        "lint:fix": "eslint --fix .",
+        "format": "prettier --write .",
+        "format:check": "prettier --check ."
     },
     "engines": {
         "node": ">=18.0.0"
