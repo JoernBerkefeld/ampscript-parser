@@ -33,6 +33,7 @@
         "test": "echo No tests defined",
         "lint": "eslint .",
         "lint:fix": "eslint --fix .",
+        "prepare": "husky || true",
         "format": "prettier --write .",
         "format:check": "prettier --check ."
     },
@@ -47,6 +48,7 @@
         "eslint-plugin-prettier": "^5.5.0",
         "eslint-plugin-unicorn": "^64.0.0",
         "globals": "^17.4.0",
+        "husky": "^9.1.7",
         "prettier": "^3.8.1"
     }
 }
