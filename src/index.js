@@ -1071,6 +1071,100 @@ function parseStatements(tokens) {
     return statements;
 }
 
+// ── Cross-block control-flow depth (for formatters) ─────────────────────────
+
+/**
+ * When `IF`/`FOR` open in one `%%[ ]%%` block and `ENDIF`/`NEXT` appear in a
+ * later block, those closers parse as top-level `RawStatement` nodes with no
+ * structural depth. Walk the document in source order, track unclosed loops
+ * and conditionals, and set `crossBlockIndentDepth` on matching closers so
+ * printers can align them with the opening keywords.
+ *
+ * @param {{ type: string, children?: unknown[] }} document
+ */
+function linkCrossBlockStatements(document) {
+    if (!document || document.type !== 'Document' || !Array.isArray(document.children)) {
+        return;
+    }
+
+    /** @type {{ type: string, depth: number }[]} */
+    const stack = [];
+
+    /**
+     * @param {unknown[]} stmts
+     * @param {number} depth
+     */
+    function visitStatements(stmts, depth) {
+        if (!Array.isArray(stmts)) {
+            return;
+        }
+        for (const stmt of stmts) {
+            visitStatement(stmt, depth);
+        }
+    }
+
+    /**
+     * @param {object | null | undefined} stmt
+     * @param {number} depth
+     */
+    function visitStatement(stmt, depth) {
+        if (!stmt || typeof stmt !== 'object') {
+            return;
+        }
+        if (stmt.type === 'Comment') {
+            return;
+        }
+
+        if (stmt.type === 'ForStatement') {
+            const okw = stmt.originalKeywords || {};
+            if (!('next' in okw)) {
+                stack.push({ type: 'for', depth });
+                visitStatements(stmt.body, depth + 1);
+                return;
+            }
+            visitStatements(stmt.body, depth + 1);
+            return;
+        }
+
+        if (stmt.type === 'IfStatement') {
+            const okw = stmt.originalKeywords || {};
+            if (!('endif' in okw)) {
+                stack.push({ type: 'if', depth });
+                visitStatements(stmt.consequent, depth + 1);
+                for (const alt of stmt.alternates || []) {
+                    if (alt.type === 'ElseIfClause' || alt.type === 'ElseClause') {
+                        visitStatements(alt.body, depth + 1);
+                    }
+                }
+                return;
+            }
+            visitStatements(stmt.consequent, depth + 1);
+            for (const alt of stmt.alternates || []) {
+                if (alt.type === 'ElseIfClause' || alt.type === 'ElseClause') {
+                    visitStatements(alt.body, depth + 1);
+                }
+            }
+            return;
+        }
+
+        if (stmt.type === 'RawStatement') {
+            const v = String(stmt.value || '').toLowerCase();
+            if (v === 'endif' || v === 'next') {
+                const item = stack.pop();
+                if (item) {
+                    stmt.crossBlockIndentDepth = item.depth;
+                }
+            }
+        }
+    }
+
+    for (const child of document.children) {
+        if (child && child.type === 'Block' && Array.isArray(child.statements)) {
+            visitStatements(child.statements, 0);
+        }
+    }
+}
+
 // ── Top-level parser ─────────────────────────────────────────────────────────
 
 function parse(text) {
@@ -1219,7 +1313,9 @@ function parse(text) {
     pushContent(text.length);
     markPrettierIgnore(children);
 
-    return { type: 'Document', children, start: 0, end: text.length };
+    const document = { type: 'Document', children, start: 0, end: text.length };
+    linkCrossBlockStatements(document);
+    return document;
 }
 
 export { parse, tokenizeBlock, parseStatements, TokenType };

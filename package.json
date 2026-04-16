@@ -1,6 +1,6 @@
 {
     "name": "ampscript-parser",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "AMPscript lexer and parser producing an AST for SFMC tooling",
     "type": "module",
     "main": "src/index.js",
@@ -30,7 +30,7 @@
     ],
     "license": "MIT",
     "scripts": {
-        "test": "echo No tests defined",
+        "test": "node --test test/*.test.mjs",
         "lint": "eslint .",
         "lint:fix": "eslint --fix .",
         "prepare": "husky || true",
