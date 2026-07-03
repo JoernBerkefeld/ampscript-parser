@@ -1,6 +1,6 @@
 {
     "name": "ampscript-parser",
-    "version": "0.1.4",
+    "version": "0.2.0",
     "description": "AMPscript lexer and parser producing an AST for SFMC tooling",
     "type": "module",
     "main": "src/index.js",
