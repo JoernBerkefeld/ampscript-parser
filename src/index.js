@@ -518,12 +518,14 @@ function parseStatements(tokens) {
         const t = current();
         if (
             t &&
-            (t.type === TokenType.EQ ||
-                t.type === TokenType.NEQ ||
-                t.type === TokenType.GT ||
-                t.type === TokenType.LT ||
-                t.type === TokenType.GTE ||
-                t.type === TokenType.LTE)
+            [
+                TokenType.EQ,
+                TokenType.NEQ,
+                TokenType.GT,
+                TokenType.LT,
+                TokenType.GTE,
+                TokenType.LTE,
+            ].includes(t.type)
         ) {
             const op = advance();
             skipTrivia();
@@ -641,7 +643,8 @@ function parseStatements(tokens) {
 
     while (pos < tokens.length) {
         const newlines = skipTrivia();
-        if (pos >= tokens.length) {
+        const isAtEnd = pos >= tokens.length;
+        if (isAtEnd) {
             break;
         }
         const hasBlankLine = newlines >= 2 && statements.length > 0;
@@ -744,12 +747,14 @@ function parseStatements(tokens) {
         }
 
         if (
-            t.type === TokenType.ENDIF ||
-            t.type === TokenType.ELSE ||
-            t.type === TokenType.ELSEIF ||
-            t.type === TokenType.NEXT ||
-            t.type === TokenType.THEN ||
-            t.type === TokenType.DO
+            [
+                TokenType.ENDIF,
+                TokenType.ELSE,
+                TokenType.ELSEIF,
+                TokenType.NEXT,
+                TokenType.THEN,
+                TokenType.DO,
+            ].includes(t.type)
         ) {
             const kw = advance();
             if (t.type === TokenType.ELSEIF) {
@@ -1050,11 +1055,7 @@ function parseStatements(tokens) {
             return parseForStatement();
         }
 
-        if (
-            t.type === TokenType.IDENTIFIER ||
-            t.type === TokenType.VARIABLE ||
-            t.type === TokenType.LPAREN
-        ) {
+        if ([TokenType.IDENTIFIER, TokenType.VARIABLE, TokenType.LPAREN].includes(t.type)) {
             const expr = parseExpression();
             return {
                 type: 'ExpressionStatement',
@@ -1128,10 +1129,11 @@ function linkCrossBlockStatements(document) {
 
         if (stmt.type === 'IfStatement') {
             const okw = stmt.originalKeywords || {};
+            const alternates = stmt.alternates || [];
             if (!('endif' in okw)) {
                 stack.push({ type: 'if', depth });
                 visitStatements(stmt.consequent, depth + 1);
-                for (const alt of stmt.alternates || []) {
+                for (const alt of alternates) {
                     if (alt.type === 'ElseIfClause' || alt.type === 'ElseClause') {
                         visitStatements(alt.body, depth + 1);
                     }
@@ -1139,7 +1141,7 @@ function linkCrossBlockStatements(document) {
                 return;
             }
             visitStatements(stmt.consequent, depth + 1);
-            for (const alt of stmt.alternates || []) {
+            for (const alt of alternates) {
                 if (alt.type === 'ElseIfClause' || alt.type === 'ElseClause') {
                     visitStatements(alt.body, depth + 1);
                 }
@@ -1187,6 +1189,51 @@ function parse(text) {
         /^<script\b(?=[^>]*\brunat\s*=\s*['"]server['"])(?=[^>]*\blanguage\s*=\s*['"]ampscript['"])[^>]*>/i;
     const scriptCloseRe = /^<\/script\s*>/i;
 
+    // Scan forward to the start of the `</script>` close tag (or end of text).
+    function findScriptCodeEnd(from) {
+        let i = from;
+        while (i < text.length) {
+            if (text[i] === '<' && scriptCloseRe.test(text.slice(i))) {
+                return i;
+            }
+            i++;
+        }
+        return i;
+    }
+
+    // Scan forward to the matching `]%%` close of a `%%[ … ]%%` block (or end of text).
+    function findScriptBlockEnd(from) {
+        let i = from;
+        let depth = 1;
+        while (i < text.length) {
+            if (text[i] === '%' && text[i + 1] === '%' && text[i + 2] === '[') {
+                depth++;
+                i += 3;
+            } else if (text[i] === ']' && text[i + 1] === '%' && text[i + 2] === '%') {
+                depth--;
+                if (depth === 0) {
+                    return i;
+                }
+                i += 3;
+            } else {
+                i++;
+            }
+        }
+        return i;
+    }
+
+    // Scan forward to the `=%%` close of a `%%=…=%%` inline expression (or end of text).
+    function findInlineExpressionEnd(from) {
+        let i = from;
+        while (i < text.length) {
+            if (text[i] === '=' && text[i + 1] === '%' && text[i + 2] === '%') {
+                return i;
+            }
+            i++;
+        }
+        return i;
+    }
+
     while (index < text.length) {
         if (text[index] === '<') {
             const slice = text.slice(index);
@@ -1198,15 +1245,7 @@ function parse(text) {
                 index += openTag.length;
                 const codeStart = index;
 
-                while (index < text.length) {
-                    if (text[index] === '<') {
-                        const closeMatch = scriptCloseRe.exec(text.slice(index));
-                        if (closeMatch) {
-                            break;
-                        }
-                    }
-                    index++;
-                }
+                index = findScriptCodeEnd(index);
 
                 const codeEnd = index;
                 const code = text.slice(codeStart, codeEnd);
@@ -1237,25 +1276,7 @@ function parse(text) {
             index += 3;
             const codeStart = index;
 
-            let depth = 1;
-            while (index < text.length) {
-                if (text[index] === '%' && text[index + 1] === '%' && text[index + 2] === '[') {
-                    depth++;
-                    index += 3;
-                } else if (
-                    text[index] === ']' &&
-                    text[index + 1] === '%' &&
-                    text[index + 2] === '%'
-                ) {
-                    depth--;
-                    if (depth === 0) {
-                        break;
-                    }
-                    index += 3;
-                } else {
-                    index++;
-                }
-            }
+            index = findScriptBlockEnd(index);
 
             const codeEnd = index;
             const code = text.slice(codeStart, codeEnd);
@@ -1276,12 +1297,7 @@ function parse(text) {
             index += 3;
             const codeStart = index;
 
-            while (index < text.length) {
-                if (text[index] === '=' && text[index + 1] === '%' && text[index + 2] === '%') {
-                    break;
-                }
-                index++;
-            }
+            index = findInlineExpressionEnd(index);
 
             const codeEnd = index;
             const code = text.slice(codeStart, codeEnd);
