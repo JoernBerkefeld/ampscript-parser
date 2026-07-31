@@ -117,6 +117,7 @@ const TokenType = {
     BOOLEAN: 'BOOLEAN',
     IDENTIFIER: 'IDENTIFIER',
     VARIABLE: 'VARIABLE',
+    PERSONALIZATION: 'PERSONALIZATION',
     COMMENT: 'COMMENT',
     NEWLINE: 'NEWLINE',
     WHITESPACE: 'WHITESPACE',
@@ -387,6 +388,35 @@ function tokenizeBlock(code, offset = 0) {
             continue;
         }
 
+        // Bracketed personalization string: [_subscriberkey], [First Name],
+        // [MSG(0).NOUN(0)]. Only matched when the brackets are balanced on the
+        // same line and the inner text is shaped like an attribute name
+        // (letters, digits, spaces, underscores, and the parameterized
+        // punctuation `.`, `(`, `)`, `@`). Anything containing operators,
+        // quotes, commas, or `%` degrades to a RAW `[` token so malformed or
+        // nested AMPscript (e.g. `[ SET @a = "x" ]`) is not misread as a
+        // personalization string and cannot swallow unrelated statements.
+        if (code[index] === '[') {
+            let scan = index + 1;
+            while (scan < code.length && !'][\n\r'.includes(code[scan])) {
+                scan++;
+            }
+            if (code[scan] === ']' && scan > index + 1) {
+                const inner = code.slice(index + 1, scan);
+                if (/^[\w .()@]+$/.test(inner)) {
+                    const start = index;
+                    index = scan + 1;
+                    tokens.push({
+                        type: TokenType.PERSONALIZATION,
+                        value: inner,
+                        start: offset + start,
+                        end: offset + index,
+                    });
+                    continue;
+                }
+            }
+        }
+
         const start = index;
         index++;
         tokens.push({
@@ -605,6 +635,16 @@ function parseStatements(tokens) {
             return { type: 'Variable', value: t.value, start: t.start, end: t.end };
         }
 
+        if (t.type === TokenType.PERSONALIZATION) {
+            advance();
+            return {
+                type: 'PersonalizationString',
+                value: t.value,
+                start: t.start,
+                end: t.end,
+            };
+        }
+
         if (t.type === TokenType.STRING) {
             advance();
             const quote = t.value[0];
@@ -737,7 +777,9 @@ function parseStatements(tokens) {
             continue;
         }
 
-        if (t.type === TokenType.IDENTIFIER || t.type === TokenType.VARIABLE) {
+        if (
+            [TokenType.IDENTIFIER, TokenType.VARIABLE, TokenType.PERSONALIZATION].includes(t.type)
+        ) {
             const expr = parseExpression();
             pushStmt(
                 { type: 'ExpressionStatement', expression: expr, start: expr.start, end: expr.end },
@@ -1055,7 +1097,14 @@ function parseStatements(tokens) {
             return parseForStatement();
         }
 
-        if ([TokenType.IDENTIFIER, TokenType.VARIABLE, TokenType.LPAREN].includes(t.type)) {
+        if (
+            [
+                TokenType.IDENTIFIER,
+                TokenType.VARIABLE,
+                TokenType.LPAREN,
+                TokenType.PERSONALIZATION,
+            ].includes(t.type)
+        ) {
             const expr = parseExpression();
             return {
                 type: 'ExpressionStatement',
