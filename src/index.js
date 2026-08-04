@@ -1137,7 +1137,9 @@ function linkCrossBlockStatements(document) {
         return;
     }
 
-    /** @type {{ type: string, depth: number }[]} */
+    /**
+     * @type {{ type: string, depth: number }[]}
+     */
     const stack = [];
 
     /**
